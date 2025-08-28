@@ -1,0 +1,544 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Missions API",
+    "version": "1.0.0",
+    "description": "Swagger (OpenAPI) specification generated from the Confluence 'Missions' document. Covers mission status, progress, and reward collection endpoints."
+  },
+  "servers": [
+    {
+      "url": "https://api.example.com",
+      "description": "Production"
+    },
+    {
+      "url": "https://staging-api.example.com",
+      "description": "Staging"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Missions",
+      "description": "Status and progress for missions and activities"
+    },
+    {
+      "name": "Rewards",
+      "description": "Collecting activity and chest rewards"
+    }
+  ],
+  "paths": {
+    "/missions/status": {
+      "get": {
+        "tags": [
+          "Missions"
+        ],
+        "summary": "Get current missions and activities for the user",
+        "description": "Calling once on login to receive the current missions and activities for a user.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MissionsData"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/missions/progress": {
+      "post": {
+        "tags": [
+          "Missions"
+        ],
+        "summary": "Report client-side task progress",
+        "description": "Used to signal progression on client-side tasks that can’t be detected by the backend (e.g., OpenShop). Upon success, an update is pushed via socket.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "taskId": {
+                    "type": "string",
+                    "format": "int64",
+                    "description": "Identifier of the task that has been progressed."
+                  },
+                  "slotSlug": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "description": "Identifier for slot tasks; null means any"
+                  },
+                  "isGoldenSlotAllowed": {
+                    "type": "boolean",
+                    "description": "Can the task be solved with a Golden Slot?"
+                  },
+                  "specialWinType": {
+                    "type": "string",
+                    "description": "Special win type (e.g., big, mega, monster, legendary)"
+                  },
+                  "minBet": {
+                    "type": "string",
+                    "format": "int64",
+                    "description": "If the task contains a min-bet part"
+                  }
+                },
+                "required": [
+                  "taskId"
+                ]
+              },
+              "examples": {
+                "progressExample": {
+                  "summary": "Report slot spins progress",
+                  "value": {
+                    "taskId": "123456789",
+                    "slotSlug": "pharaohs-gold",
+                    "isGoldenSlotAllowed": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK - Update pushed via socket"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/missions/activity/collect": {
+      "post": {
+        "tags": [
+          "Rewards"
+        ],
+        "summary": "Collect completed activity reward",
+        "description": "Used to collect a task when it is in Completed state (status = 1). Upon success, an update is pushed via socket.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "activityId": {
+                    "type": "string",
+                    "format": "int64",
+                    "description": "Identifier of the activity that should be collected."
+                  }
+                },
+                "required": [
+                  "activityId"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK - Update pushed via socket"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/missions/chest/collect": {
+      "post": {
+        "tags": [
+          "Rewards"
+        ],
+        "summary": "Collect unlocked chest reward",
+        "description": "Used to collect a chest when it is in Unlocked state (status = 1). Upon success, an update is pushed via socket.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "chestId": {
+                    "type": "string",
+                    "format": "int64",
+                    "description": "Identifier of the chest that should be collected."
+                  }
+                },
+                "required": [
+                  "chestId"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK - Update pushed via socket"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "MissionsData": {
+        "type": "object",
+        "properties": {
+          "daily": {
+            "$ref": "#/components/schemas/Daily"
+          },
+          "weekly": {
+            "$ref": "#/components/schemas/Weekly"
+          },
+          "missions": {
+            "type": "array",
+            "description": "General missions (iteration 2)",
+            "items": {
+              "$ref": "#/components/schemas/Task"
+            }
+          }
+        }
+      },
+      "Daily": {
+        "type": "object",
+        "description": "Contains all data for daily tasks",
+        "properties": {
+          "progress": {
+            "type": "number",
+            "format": "float",
+            "description": "Progress bar for the 5 daily chests (between 0 and 1)"
+          },
+          "chests": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RewardChest"
+            }
+          },
+          "dailyActivities": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DailyActivity"
+            }
+          },
+          "expiresAt": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Unix timestamp until the current set of activities expires."
+          },
+          "activityPoints": {
+            "type": "integer",
+            "description": "The amount of activity points the user collected that day."
+          }
+        },
+        "required": [
+          "progress",
+          "chests",
+          "dailyActivities",
+          "expiresAt",
+          "activityPoints"
+        ]
+      },
+      "Weekly": {
+        "type": "object",
+        "description": "Contains all data for weekly progress",
+        "properties": {
+          "activityPoints": {
+            "type": "integer",
+            "description": "The amount of activity points the user collected this week."
+          },
+          "chests": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RewardChest"
+            }
+          },
+          "expiresAt": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Unix timestamp until the week expires."
+          }
+        },
+        "required": [
+          "activityPoints",
+          "chests",
+          "expiresAt"
+        ]
+      },
+      "DailyActivity": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "int64"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ActivityStatus"
+          },
+          "task": {
+            "$ref": "#/components/schemas/Task"
+          },
+          "rewards": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Reward"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "task"
+        ]
+      },
+      "Reward": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "description": "Common reward type"
+          },
+          "amount": {
+            "type": "string",
+            "format": "int64"
+          }
+        },
+        "required": [
+          "type",
+          "amount"
+        ]
+      },
+      "RewardChest": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "int64"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ChestStatus"
+          },
+          "style": {
+            "type": "string",
+            "description": "Chest visuals"
+          },
+          "targetActivityPoints": {
+            "type": "integer",
+            "description": "Required activity points to unlock"
+          },
+          "rewards": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Reward"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "targetActivityPoints"
+        ]
+      },
+      "Task": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "int64"
+          },
+          "status": {
+            "$ref": "#/components/schemas/TaskStatus"
+          },
+          "type": {
+            "$ref": "#/components/schemas/TaskType"
+          },
+          "progress": {
+            "type": "number",
+            "format": "float",
+            "description": "Progress between 0 and 1"
+          },
+          "taskParameter": {
+            "$ref": "#/components/schemas/TaskParameter"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "type"
+        ]
+      },
+      "TaskParameter": {
+        "type": "object",
+        "description": "Optional parameters, parsed for each type",
+        "properties": {
+          "goal": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "int64",
+            "description": "Required task target to reach"
+          },
+          "current": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "int64",
+            "description": "Between 0 and goal"
+          },
+          "subType": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "If type is SlotTask then SlotTaskSubType applies"
+          },
+          "slotSlug": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "specialWinType": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "minBet": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "int64"
+          }
+        }
+      },
+      "ChestStatus": {
+        "type": "string",
+        "enum": [
+          "unlocked",
+          "collected",
+          "locked"
+        ]
+      },
+      "ActivityStatus": {
+        "type": "string",
+        "enum": [
+          "running",
+          "completed",
+          "collected"
+        ]
+      },
+      "TaskStatus": {
+        "type": "string",
+        "enum": [
+          "running",
+          "completed",
+          "collected"
+        ]
+      },
+      "TaskType": {
+        "type": "string",
+        "description": "General task type",
+        "enum": [
+          "SlotTask",
+          "LevelUp",
+          "MagicBonusWheel",
+          "CollectSymbols",
+          "CollectDailyLeagueBonus",
+          "WatchVideos",
+          "CollectStars",
+          "CollectTrophies",
+          "CollectCashbookCards"
+        ]
+      },
+      "SlotTaskSubType": {
+        "type": "string",
+        "enum": [
+          "make-spins",
+          "win-chips",
+          "special-win",
+          "win-streak",
+          "max-bet-spins",
+          "bet-sum",
+          "win-chips-single",
+          "jackpot-spins",
+          "min-bet-spins"
+        ]
+      },
+      "SocketMessage": {
+        "type": "object",
+        "description": "Socket events that can be emitted by the backend",
+        "properties": {
+          "event": {
+            "type": "string",
+            "enum": [
+              "daily-task-update",
+              "mission-task-update",
+              "status-update"
+            ]
+          },
+          "task": {
+            "$ref": "#/components/schemas/Task"
+          },
+          "status": {
+            "$ref": "#/components/schemas/MissionsData"
+          }
+        }
+      }
+    }
+  },
+  "x-socket-messages": {
+    "DailyTaskUpdate": {
+      "event": "daily-task-update",
+      "payload": {
+        "$ref": "#/components/schemas/Task"
+      },
+      "description": "Sent when the status or progress of a daily task changes."
+    },
+    "MissionTaskUpdate": {
+      "event": "mission-task-update",
+      "payload": {
+        "$ref": "#/components/schemas/Task"
+      },
+      "description": "Sent when the status or progress of a mission task changes."
+    },
+    "StatusUpdate": {
+      "event": "status-update",
+      "payload": {
+        "$ref": "#/components/schemas/MissionsData"
+      },
+      "description": "Sent when the overall status changes."
+    }
+  }
+}
